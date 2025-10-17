@@ -17,12 +17,10 @@ import java.util.*;
 public class DogApiBreedFetcher implements BreedFetcher {
     private final OkHttpClient client;
 
-    // Default constructor for production use
     public DogApiBreedFetcher() {
         this.client = new OkHttpClient();
     }
 
-    // Constructor for testing with mock client
     public DogApiBreedFetcher(OkHttpClient client) {
         this.client = client;
     }

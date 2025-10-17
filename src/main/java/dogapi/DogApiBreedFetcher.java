@@ -15,7 +15,17 @@ import java.util.*;
  * exceptions to align with the requirements of the BreedFetcher interface.
  */
 public class DogApiBreedFetcher implements BreedFetcher {
-    private final OkHttpClient client = new OkHttpClient();
+    private final OkHttpClient client;
+
+    // Default constructor for production use
+    public DogApiBreedFetcher() {
+        this.client = new OkHttpClient();
+    }
+
+    // Constructor for testing with mock client
+    public DogApiBreedFetcher(OkHttpClient client) {
+        this.client = client;
+    }
 
     /**
      * Fetch the list of sub breeds for the given breed from the dog.ceo API.

@@ -24,40 +24,44 @@ public class DogApiBreedFetcher implements BreedFetcher {
      * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
      */
     @Override
-    public List<String> getSubBreeds(String breed) {
-        String url = "https://dog.ceo/api/breed/" + breed.toLowerCase() + "/list";
+    public List<String> getSubBreeds(String breed) throws BreedNotFoundException {
+        if (breed == null || breed.trim().isEmpty()) {
+            throw new BreedNotFoundException("Breed name must be provided.");
+        }
+
+        String normalized = breed.trim().toLowerCase(Locale.ROOT);
+        String url = "https://dog.ceo/api/breed/" + normalized + "/list";
 
         Request request = new Request.Builder()
                 .url(url)
+                .get()
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new BreedNotFoundException("HTTP error code: " + response.code() + " for breed: " + breed);
+            if (response.body() == null) {
+                throw new BreedNotFoundException("Empty response from API for breed: " + breed);
+            }
+            String body = response.body().string();
+
+            JSONObject json = new JSONObject(body);
+            String status = json.optString("status", "error");
+
+            if (!response.isSuccessful() || !"success".equalsIgnoreCase(status)) {
+                String apiMsg = json.optString("message", "Unknown error");
+                throw new BreedNotFoundException("Breed not found or API error for '" + breed + "': " + apiMsg);
             }
 
-            String responseData = response.body().string();
-            JSONObject jsonResponse = new JSONObject(responseData);
-
-            String status = jsonResponse.getString("status");
-            if (!"success".equals(status)) {
-                String message = jsonResponse.optString("message", "Unknown error");
-                throw new BreedNotFoundException("API error for breed '" + breed + "': " + message);
+            JSONArray arr = json.getJSONArray("message");
+            List<String> subBreeds = new ArrayList<>(arr.length());
+            for (int i = 0; i < arr.length(); i++) {
+                subBreeds.add(arr.getString(i));
             }
-
-            JSONArray subBreedsArray = jsonResponse.getJSONArray("message");
-            List<String> subBreeds = new ArrayList<>();
-
-            for (int i = 0; i < subBreedsArray.length(); i++) {
-                subBreeds.add(subBreedsArray.getString(i));
-            }
-
             return subBreeds;
 
         } catch (IOException e) {
-            throw new BreedNotFoundException("Failed to fetch sub-breeds for breed '" + breed + "': " + e.getMessage());
+            throw new BreedNotFoundException("Failed to fetch sub-breeds for '" + breed + "': " + e.getMessage());
         } catch (Exception e) {
-            throw new BreedNotFoundException("Error processing response for breed '" + breed + "': " + e.getMessage());
+            throw new BreedNotFoundException("Unexpected error for '" + breed + "': " + e.getMessage());
         }
     }
 }
